@@ -11,7 +11,7 @@ function App() {
 
   useEffect(()=>{
     const fetchData = async()=>{
-     await axios.get('http://103.189.172.40:8012/api/data-analysis/wind-speed/').then((res)=>{
+     await axios.get('api/data-analysis/wind-speed/').then((res)=>{
         console.log(res.data,'ress')
         setData(res.data)
       })
