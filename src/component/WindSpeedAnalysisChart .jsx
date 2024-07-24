@@ -1,4 +1,5 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+/* eslint-disable react/prop-types */
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 
 const beaufortScale = {
@@ -7,8 +8,13 @@ const beaufortScale = {
   11: [56, 63], 12: [64, Infinity]
 };
 
-// eslint-disable-next-line react/prop-types
 const WindSpeedAnalysisChart = ({ data }) => {
+  const processedData = data.map(item => ({
+    DateTime: item.DateTime,
+    ShipWind: item['Wind\r\n(BF)'] !== null ? parseFloat(item['Wind\r\n(BF)']) : null,
+    WRCWind: item.WindSpd !== null ? parseFloat(item.WindSpd) : null
+  }));
+
   const formatXAxis = (tickItem) => {
     return format(parseISO(tickItem), 'MMM dd HH:mm');
   };
@@ -24,13 +30,20 @@ const WindSpeedAnalysisChart = ({ data }) => {
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const windSpeed = parseFloat(payload[0].value);
-      const beaufortForce = getBeaufortForce(windSpeed);
       return (
         <div className="custom-tooltip" style={{ backgroundColor: 'white', padding: '5px', border: '1px solid #ccc' }}>
           <p>{`Time: ${format(parseISO(label), 'MMM dd HH:mm')}`}</p>
-          <p>{`Wind Speed: ${windSpeed} knots`}</p>
-          <p>{`Beaufort Force: ${beaufortForce}`}</p>
+          {payload.map((entry) => {
+            if (entry.value !== null) {
+              const beaufortForce = getBeaufortForce(entry.value);
+              return (
+                <p key={entry.dataKey}>
+                  {`${entry.name}: ${entry.value.toFixed(2)} knots (BF ${beaufortForce})`}
+                </p>
+              );
+            }
+            return null;
+          })}
         </div>
       );
     }
@@ -39,22 +52,14 @@ const WindSpeedAnalysisChart = ({ data }) => {
 
   return (
     <ResponsiveContainer width="100%" height={400}>
-      <LineChart data={data}>
+      <LineChart data={processedData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="DateTime" tickFormatter={formatXAxis} />
         <YAxis label={{ value: 'Wind Speed (knots)', angle: -90, position: 'insideLeft' }} />
         <Tooltip content={<CustomTooltip />} />
         <Legend />
-        <Line type="monotone" dataKey="WindSpd" stroke="#8884d8" name="Wind Speed" dot={false} />
-        {Object.entries(beaufortScale).map(([force, [min, max]]) => (
-          <ReferenceLine
-            key={force}
-            y={min}
-            stroke="red"
-            strokeDasharray="3 3"
-            label={{ value: `BF ${force}`, position: 'right' }}
-          />
-        ))}
+        <Line type="monotone" dataKey="ShipWind" stroke="#8884d8" name="Ship Wind" connectNulls={true} />
+        <Line type="monotone" dataKey="WRCWind" stroke="#82ca9d" name="WRC Wind" connectNulls={true} />
       </LineChart>
     </ResponsiveContainer>
   );
